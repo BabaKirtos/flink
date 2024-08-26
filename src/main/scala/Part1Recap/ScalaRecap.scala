@@ -20,7 +20,7 @@ object ScalaRecap extends App {
   // extending provides inheritance
   // we can extend at most 1 class
   // to avoid diamond problem, scala only supports single inheritance
-  // but we can inherit from 0 or more traits (mixin, with right to left resolution)
+  // ,but we can inherit from 0 or more traits (mixin, with right to left resolution)
   // this is done using `with` and trait
   // Note: if the inherited trait has a method with the same name and type
   // then it must extend the class and override that method as shown below
@@ -39,7 +39,7 @@ object ScalaRecap extends App {
   val newCat = new Cat("Meow")
   println(newCat.whatType)
 
-  object Singleton { // a stand alone singleton instance of the object
+  object Singleton { // a stand-alone singleton instance of the object
     val aValue = 2
   }
 

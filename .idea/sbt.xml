@@ -6,6 +6,7 @@
     <option name="customVMPath" value="$PROJECT_DIR$/../../../../Program Files/Java/jdk-11" />
     <option name="linkedExternalProjectsSettings">
       <SbtProjectSettings>
+        <option name="converterVersion" value="2" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="modules">
           <set>
@@ -14,6 +15,7 @@
           </set>
         </option>
         <option name="resolveSbtClassifiers" value="true" />
+        <option name="sbtVersion" value="1.6.2" />
         <option name="useSbtShellForBuild" value="true" />
         <option name="useSbtShellForImport" value="true" />
       </SbtProjectSettings>

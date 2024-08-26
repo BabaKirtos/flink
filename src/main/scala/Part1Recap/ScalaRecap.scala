@@ -1,5 +1,10 @@
 package Part1Recap
 
+import java.util.concurrent.Executors
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.implicitConversions
+import scala.util.{Failure, Success, Try}
+
 object ScalaRecap extends App {
 
   println("Hello World!")
@@ -27,11 +32,11 @@ object ScalaRecap extends App {
     override def whatType: String = "An advanced Animal"
   }
 
-  class Cat extends Animal with AdvancedAnimal
+  class Cat(val name: String) extends Animal with AdvancedAnimal
 
   object Cat // companion object, equivalent to static in Java
 
-  val newCat = new Cat
+  val newCat = new Cat("Meow")
   println(newCat.whatType)
 
   object Singleton { // a stand alone singleton instance of the object
@@ -60,4 +65,54 @@ object ScalaRecap extends App {
   println(comboList)
   println(comboFor)
 
+  // Futures
+  val executorService = Executors.newFixedThreadPool(4)
+  implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(executorService)
+
+  val aFuture: Future[Int] = Future {
+    // code to be evaluated on a different thread
+    ("123456789" * 10).map(_.asDigit).sum
+  }
+
+  // register a callback when it finishes
+  val aPartialFunction: PartialFunction[Try[Int], Unit] = {
+    case Success(value) => println("Partial: " + value)
+    case Failure(exception) =>
+      println(s"Got the following exception: ${exception.getMessage}")
+  }
+
+  aFuture.onComplete(aPartialFunction)
+
+  val futureResult: Future[Int] = aFuture.map(_ * 2)
+  futureResult.onComplete {
+    case Failure(exception) => println("failed with exception: " + exception.getMessage)
+    case Success(value) => println("map: " + value)
+      executorService.shutdown()
+  }
+
+  // implicits
+  implicit val timeout = 3000
+
+  def setTimeout(f: () => Unit)(implicit tout: Int) = {
+    Thread.sleep(tout)
+    f()
+  }
+
+  setTimeout(() => println("timeout")) // timeout is automatically injected
+
+  // extension methods
+  implicit class MyRichInt(num: Int) {
+    def isEven: Boolean = num % 2 == 0
+  }
+
+  println(12.isEven)
+
+  // conversions
+  implicit def string2Animal(name: String): Cat = new Cat(name)
+
+  // compiler instantiated a new Cat instance on this string
+  // string2Animal("ImplicitMeow")
+  val aString = "ImplicitMeow"
+
+  println(aString.name)
 }

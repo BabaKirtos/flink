@@ -75,20 +75,16 @@ object ScalaRecap extends App {
   }
 
   // register a callback when it finishes
-  val aPartialFunction: PartialFunction[Try[Int], Unit] = {
-    case Success(value) => println("Partial: " + value)
+  def aPartialFunction(in: String): PartialFunction[Try[Int], Unit] = {
+    case Success(value) => println(in + value)
     case Failure(exception) =>
       println(s"Got the following exception: ${exception.getMessage}")
   }
 
-  aFuture.onComplete(aPartialFunction)
+  aFuture.onComplete(aPartialFunction("Partial: "))
 
   val futureResult: Future[Int] = aFuture.map(_ * 2)
-  futureResult.onComplete {
-    case Failure(exception) => println("failed with exception: " + exception.getMessage)
-    case Success(value) => println("map: " + value)
-      executorService.shutdown()
-  }
+  futureResult.onComplete(aPartialFunction("Map: "))
 
   // implicits
   implicit val timeout = 3000
@@ -99,6 +95,8 @@ object ScalaRecap extends App {
   }
 
   setTimeout(() => println("timeout")) // timeout is automatically injected
+
+  executorService.shutdown()
 
   // extension methods
   implicit class MyRichInt(num: Int) {

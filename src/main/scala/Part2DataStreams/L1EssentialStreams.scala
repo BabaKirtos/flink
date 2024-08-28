@@ -158,9 +158,9 @@ object L1EssentialStreams {
 
 
   def main(args: Array[String]): Unit = {
-//    applicationTemplate()
-//    demoTranformation()
-//    solution()
+    //    applicationTemplate()
+    //    demoTranformation()
+    //    solution()
     demoExplicitTransformation()
   }
 }

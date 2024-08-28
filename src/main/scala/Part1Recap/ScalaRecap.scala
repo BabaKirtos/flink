@@ -87,7 +87,7 @@ object ScalaRecap extends App {
   futureResult.onComplete(aPartialFunction("Map: "))
 
   // implicits
-  implicit val timeout = 3000
+  implicit val timeout = 500
 
   def setTimeout(f: () => Unit)(implicit tout: Int) = {
     Thread.sleep(tout)

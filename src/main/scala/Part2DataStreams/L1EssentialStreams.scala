@@ -2,10 +2,13 @@ package Part2DataStreams
 
 // import implicit TypeInformation for the data of our DataStream
 
+import org.apache.flink.api.common.functions.{FlatMapFunction, MapFunction, ReduceFunction}
 import org.apache.flink.api.common.serialization.SimpleStringEncoder
 import org.apache.flink.core.fs.Path
+import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
 import org.apache.flink.streaming.api.scala._
+import org.apache.flink.util.Collector
 
 object L1EssentialStreams {
 
@@ -70,7 +73,6 @@ object L1EssentialStreams {
 
   def solution(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-
     val naturalNums: DataStream[Int] = env.fromElements((1 to 100): _*)
 
     val partialFunc: PartialFunction[Int, String] = {
@@ -86,10 +88,10 @@ object L1EssentialStreams {
 
     fizzbuzzSet.map(x => (x.n, x.output)).print()
 
-//    fizzbuzzSet
-//      .map(x => (x.n, x.output))
-//      .writeAsText("output/FizzBuzz.txt")
-//      .setParallelism(1)
+    //    fizzbuzzSet
+    //      .map(x => (x.n, x.output))
+    //      .writeAsText("output/FizzBuzz.txt")
+    //      .setParallelism(1)
 
     // alternative to the `writeAsText` method is to add a Sink
     fizzbuzzSet.addSink(
@@ -103,9 +105,62 @@ object L1EssentialStreams {
     env.execute()
   }
 
+  // explicit transformations
+  def demoExplicitTransformation(): Unit = {
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val nums: DataStream[Long] = env.fromSequence(1, 100)
+
+    // map
+    val doubledNums: DataStream[Long] = nums.map(_ * 2)
+
+    // low level map, explicit version
+    val doubleNums_v2 = nums.map(new MapFunction[Long, Long] {
+      // we can declare fields, methods, more complex computations
+      override def map(value: Long): Long = value * 2
+    })
+
+    val expandedNums = nums.flatMap(x => Range.Long(1, x, 1).toList)
+
+    // explicit flatMap
+    val expandedNums_v2 = nums.flatMap(new FlatMapFunction[Long, Long] {
+      override def flatMap(n: Long, out: Collector[Long]): Unit = {
+        // we can declare fields, methods, more complex computations
+        Range.Long(1, n, 1).foreach { i =>
+          out.collect(i) // imperative style - pushes each element downstream
+        }
+      }
+    })
+
+    // most powerful is the process method
+    // it's the most general process function in Flink
+    val expanedNums_v3 = nums.process(new ProcessFunction[Long, Long] {
+      override def processElement(n: Long, ctx: ProcessFunction[Long, Long]#Context, out: Collector[Long]): Unit = {
+        Range.Long(1, n, 1).foreach { i =>
+          out.collect(i) // imperative style - pushes each element downstream
+        }
+      }
+    })
+
+    // reduce
+    // they happen on keyed streams
+    val keyedNums: KeyedStream[Long, Boolean] = nums.keyBy(n => n % 2 == 0)
+    val sumByKey = keyedNums.reduce(_ + _) // sum all element by key
+
+    // explicit
+    val sumByKey_v2 = keyedNums.reduce(new ReduceFunction[Long] {
+      override def reduce(x: Long, y: Long): Long = x + y
+    })
+
+    sumByKey_v2.print()
+
+    env.execute()
+  }
+
+
   def main(args: Array[String]): Unit = {
-    //    applicationTemplate()
-    //    demoTranformation()
-    solution()
+//    applicationTemplate()
+//    demoTranformation()
+//    solution()
+    demoExplicitTransformation()
   }
 }

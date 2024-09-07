@@ -4,13 +4,13 @@ import generators.gaming._
 import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.streaming.api.scala._
-import org.apache.flink.streaming.api.scala.function.{AllWindowFunction, ProcessAllWindowFunction, ProcessWindowFunction}
+import org.apache.flink.streaming.api.scala.function.{AllWindowFunction, ProcessAllWindowFunction, ProcessWindowFunction, WindowFunction}
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
 
-import java.time.Instant
+import java.time.{Instant, ZoneId}
 import scala.concurrent.duration._
 
 object L2WindowFunctions {
@@ -57,8 +57,8 @@ object L2WindowFunctions {
 
   val threeSecondsTumblingWindow = eventStream.windowAll(TumblingEventTimeWindows.of(Time.seconds(3)))
 
-  def milliConverter(millis: Long): Instant =
-    Instant.ofEpochMilli(millis)
+  def getSecondsInt(millis: Long): Int =
+    ((millis / 1000) % 100).toInt
 
   class CountByWindowAll extends AllWindowFunction[ServerEvent, String, TimeWindow] {
     //                                             ^ input      ^ output  ^ window type
@@ -67,7 +67,7 @@ object L2WindowFunctions {
       // out of type Collector will collect result for each window computation
       val registrationEventCount = input.count(event => event.isInstanceOf[PlayerRegistered])
       out.collect(
-        s"Window: [${milliConverter(window.getStart)} - ${milliConverter(window.getEnd)}) - $registrationEventCount")
+        s"Window: [${getSecondsInt(window.getStart)} - ${getSecondsInt(window.getEnd)}) - $registrationEventCount")
     }
   }
 
@@ -83,7 +83,7 @@ object L2WindowFunctions {
       val window = context.window
       val registrationEventCount = elements.count(event => event.isInstanceOf[PlayerRegistered])
       out.collect(
-        s"Window: [${milliConverter(window.getStart)} - ${milliConverter(window.getEnd)}) - $registrationEventCount")
+        s"Window: [${getSecondsInt(window.getStart)} - ${getSecondsInt(window.getEnd)}) - $registrationEventCount")
     }
   }
 
@@ -119,9 +119,55 @@ object L2WindowFunctions {
     env.execute()
   }
 
+  /*
+  Keyed streams and window functions
+   */
+  // Each element will be assigned to a "mini-stream" based on its own key
+  // They grouped by their key and same key streams runs on same machine
+  val streamByType: KeyedStream[ServerEvent, String] = eventStream.keyBy(e => e.getClass.getSimpleName)
+
+  // For every key we will have a separate window allocation
+  // Refer to the video for ASCII diagrams
+  val threeSecondsTumblingWindows = streamByType.window(TumblingEventTimeWindows.of(Time.seconds(3)))
+
+  class CountInWindow extends WindowFunction[ServerEvent, String, String, TimeWindow] {
+    override def apply(key: String, window: TimeWindow, input: Iterable[ServerEvent], out: Collector[String]): Unit = {
+      out.collect(
+        s"$key: " +
+          s"start - ${getSecondsInt(window.getStart)}, " +
+          s"end - ${getSecondsInt(window.getEnd)}, " +
+          s"count - ${input.size}")
+    }
+  }
+
+  // Alternative - process functions for windows
+  class CountInWindowV2 extends ProcessWindowFunction[ServerEvent, String, String, TimeWindow] {
+    override def process(key: String, context: Context, elements: Iterable[ServerEvent], out: Collector[String]): Unit = {
+      out.collect(
+        s"$key: " +
+          s"start = ${getSecondsInt(context.window.getStart)}, " +
+          s"end = ${getSecondsInt(context.window.getEnd)}, " +
+          s"count = ${elements.size}")
+    }
+  }
+
+  def demoCountByTypeByWindow(): Unit = {
+    val finalStream = threeSecondsTumblingWindows.apply(new CountInWindow)
+    finalStream.print()
+    env.execute()
+  }
+
+  def demoCountByTypeByWindowV2(): Unit = {
+    val finalStream = threeSecondsTumblingWindows.process(new CountInWindowV2)
+    finalStream.print()
+    env.execute()
+  }
+
   def main(args: Array[String]): Unit = {
-    //    demoCountByWindow()
-    demoCountByWindowV2()
-    //    demoCountByWindowV3()
+    // demoCountByWindow()
+    // demoCountByWindowV2()
+    // demoCountByWindowV3()
+    // demoCountByTypeByWindow()
+    demoCountByTypeByWindowV2()
   }
 }

@@ -57,8 +57,8 @@ object L2WindowFunctions {
 
   val threeSecondsTumblingWindow = eventStream.windowAll(TumblingEventTimeWindows.of(Time.seconds(3)))
 
-  def getSecondsInt(millis: Long): Int =
-    ((millis / 1000) % 100).toInt
+  def getSecondsInt(millis: Long): Instant =
+    Instant.ofEpochMilli(millis)
 
   class CountByWindowAll extends AllWindowFunction[ServerEvent, String, TimeWindow] {
     //                                             ^ input      ^ output  ^ window type
@@ -162,6 +162,11 @@ object L2WindowFunctions {
     finalStream.print()
     env.execute()
   }
+
+  // Sliding windows (Overlapping windows)
+  // How many players were registered every 3 seconds, UPDATED EVERY SECOND
+  // [0s...3s][1s...4s][2s...5s]...
+
 
   def main(args: Array[String]): Unit = {
     // demoCountByWindow()

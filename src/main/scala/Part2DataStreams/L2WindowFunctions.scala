@@ -5,7 +5,7 @@ import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, Wat
 import org.apache.flink.api.common.functions.AggregateFunction
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.scala.function.{AllWindowFunction, ProcessAllWindowFunction, ProcessWindowFunction, WindowFunction}
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows
+import org.apache.flink.streaming.api.windowing.assigners.{SlidingEventTimeWindows, TumblingEventTimeWindows}
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
@@ -166,6 +166,19 @@ object L2WindowFunctions {
   // Sliding windows (Overlapping windows)
   // How many players were registered every 3 seconds, UPDATED EVERY SECOND
   // [0s...3s][1s...4s][2s...5s]...
+  def demoSlidingAllWindows(): Unit = {
+    val windowSize: Time = Time.seconds(3)
+    val slidingTime: Time = Time.seconds(1)
+
+    val slidingWindowsAll = eventStream.windowAll(SlidingEventTimeWindows.of(windowSize, slidingTime))
+
+    // process the windowed stream with similar window functions
+    val registrationCountByWindowAll = slidingWindowsAll.apply(new CountByWindowAll)
+
+    // similar to the above example
+    registrationCountByWindowAll.print()
+    env.execute()
+  }
 
 
   def main(args: Array[String]): Unit = {
@@ -173,6 +186,7 @@ object L2WindowFunctions {
     // demoCountByWindowV2()
     // demoCountByWindowV3()
     // demoCountByTypeByWindow()
-    demoCountByTypeByWindowV2()
+    // demoCountByTypeByWindowV2()
+    demoSlidingAllWindows()
   }
 }

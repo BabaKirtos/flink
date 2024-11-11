@@ -65,6 +65,30 @@ object ScalaRecap extends App {
   println(comboList)
   println(comboFor)
 
+  // Options
+  val anOptionList: List[Option[Int]] = List(Some(1), None, Some(3), None, Some(5))
+  val doubledOption: List[Option[Int]] = anOptionList.map(_.map(_ * 2))
+  println(doubledOption)
+
+  // Try
+  val aTryList: List[Try[Int]] =
+    List(Try(1), Try(throw new NullPointerException), Try(3), Try(throw new NullPointerException), Try(5))
+  val doubledTry: List[String] = aTryList.map {
+    case Failure(exception) => "Encountered a failure: " + exception.getMessage
+    case Success(value) => s"$value"
+  }
+  println(doubledTry)
+
+  // Pattern matching
+  val anUnknown: List[Any] = List("Hi", 5, true)
+  val checkType: PartialFunction[Any, String] = {
+    case a: String => s"This is a String: $a"
+    case b: Int => s"This is an Int: $b"
+    case c: Boolean => s"This is a Boolean: $c"
+    case _ => "Unknown Type"
+  }
+  println(anUnknown.map(checkType))
+
   // Futures
   val executorService = Executors.newFixedThreadPool(4)
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(executorService)
@@ -81,14 +105,19 @@ object ScalaRecap extends App {
       println(s"Got the following exception: ${exception.getMessage}")
   }
 
+  // onComplete function needs a function with signature Try[T] => U
+  // as computation might have failed on the separate thread
   aFuture.onComplete(aPartialFunction("Partial: "))
 
+  // Operations on futures returns a future
   val futureResult: Future[Int] = aFuture.map(_ * 2)
   futureResult.onComplete(aPartialFunction("Map: "))
 
   // implicits
-  implicit val timeout = 500
+  // 1 - used for implicit arguments and values
+  implicit val timeout: Int = 500 // implicit val == given clause
 
+  // in Scala 3 we write (using tout: Int)
   def setTimeout(f: () => Unit)(implicit tout: Int) = {
     Thread.sleep(tout)
     f()
@@ -98,14 +127,15 @@ object ScalaRecap extends App {
 
   executorService.shutdown()
 
-  // extension methods
-  implicit class MyRichInt(num: Int) {
-    def isEven: Boolean = num % 2 == 0
+  // 2 - used by extension methods
+  implicit class MyRichInt(number: Int) { // implicit class == extension
+    def isEven: Boolean = number % 2 == 0
   }
 
   println(12.isEven)
 
-  // conversions
+  // 3 - used for type conversion methods (dangerous)
+  // discouraged in Scala 3
   implicit def string2Animal(name: String): Cat = new Cat(name)
 
   // compiler instantiated a new Cat instance on this string

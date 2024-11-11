@@ -29,7 +29,7 @@ object L1EssentialStreams {
   }
 
   // transformation
-  def demoTranformation(): Unit = {
+  def demoTransformation(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val nums: DataStream[Int] = env.fromElements(((0 to 9)): _*)
 
@@ -133,7 +133,7 @@ object L1EssentialStreams {
 
     // most powerful is the process method
     // it's the most general process function in Flink
-    val expanedNums_v3 = nums.process(new ProcessFunction[Long, Long] {
+    val expandedNums_v3 = nums.process(new ProcessFunction[Long, Long] {
       override def processElement(n: Long, ctx: ProcessFunction[Long, Long]#Context, out: Collector[Long]): Unit = {
         Range.Long(1, n, 1).foreach { i =>
           out.collect(i) // imperative style - pushes each element downstream
@@ -158,9 +158,9 @@ object L1EssentialStreams {
 
 
   def main(args: Array[String]): Unit = {
-    //    applicationTemplate()
-    //    demoTranformation()
-    //    solution()
+    applicationTemplate()
+    demoTransformation()
+    solution()
     demoExplicitTransformation()
   }
 }

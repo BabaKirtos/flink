@@ -15,23 +15,31 @@ object L1EssentialStreams {
   // Flink application template
   def applicationTemplate(): Unit = {
 
-    // 1. execution env
+    // 1. Provide an execution env
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
-    // 2. In between, add any type of computations
-    // input
-    val simpleNumberStream: DataStream[Int] = env.fromSequence(0, 999).map(_.toInt)
-    // actions
+    // 2. In between, take input and add any type of computations
+    // input is parallelized
+    val simpleNumberStream: DataStream[Int] = env.fromSequence(1, 12).map(_.toInt)
+    // lazy action
     simpleNumberStream.print()
+
+    // simple transformation
+    // Note how the same thread handles the doubling of the numbers
+    val doubledNumbersStream: DataStream[Int] = simpleNumberStream.map(_ * 2)
+    doubledNumbersStream.print()
+
+    // The same threads would perform this check and would be out of sequence
+    val checkEven: DataStream[Boolean] = simpleNumberStream.map(_ % 2 == 0)
+    checkEven.print()
 
     // 3. execute using the env
     env.execute() // triggers all the computations in the graph
   }
 
-  // transformation
+  // transformations
   def demoTransformation(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val nums: DataStream[Int] = env.fromElements(((0 to 9)): _*)
 
     // checking default parallelism
     println("Current parallelism: " + env.getParallelism)
@@ -42,22 +50,26 @@ object L1EssentialStreams {
     // checking new parallelism
     println("New parallelism: " + env.getParallelism)
 
+    // parallelized input stream
+    val nums: DataStream[Int] = env.fromElements(1 to 24: _*)
+
     // map
-    val doubledNums: DataStream[Int] = nums.map(_ * 2)
+    val addTwo: DataStream[Int] = nums.map(_ + 2)
 
     // flatMap
-    val expandedNums: DataStream[Int] = nums.flatMap(x => List(x, x * 3))
+    val expandedNums: DataStream[Int] = nums.flatMap(x => List(x, x * 10))
+    expandedNums.print()
 
     // filter
-    val evenNums: DataStream[Int] = nums
-      .filter(_ % 2 == 0)
+    val oddNums: DataStream[Int] = addTwo
+      .filter(_ % 2 != 0)
       // you can set parallelism here as well
       .setParallelism(4)
 
-    val finalData = expandedNums.writeAsText("output/expandedStream.txt") // creates a directory
+    val finalData = oddNums.writeAsText("output/expandedStream.txt") // creates a directory
 
     // we can set parallelism at sink as well
-    finalData.setParallelism(3)
+    finalData.setParallelism(1)
 
     env.execute()
   }
@@ -158,9 +170,9 @@ object L1EssentialStreams {
 
 
   def main(args: Array[String]): Unit = {
-    applicationTemplate()
-    demoTransformation()
+    //    applicationTemplate()
+    //    demoTransformation()
     solution()
-    demoExplicitTransformation()
+    //    demoExplicitTransformation()
   }
 }
